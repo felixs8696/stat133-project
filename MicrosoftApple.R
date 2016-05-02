@@ -11,4 +11,6 @@ joined_stocks <- microsoftstocks %>%
   inner_join(applestocks %>% select(Date, appleclose,applevolume), by=c("Date"="Date"))
 ggplot(joined_stocks, aes(x=Date)) +
   geom_line(aes(y=appleclose), color="red") +
-  geom_line(aes(y=microsoftclose), color="blue")
+  geom_line(aes(y=microsoftclose), color="blue") +
+  labs(y="Stock Close", title="Apple vs. Microsoft Stock Prices")
+  

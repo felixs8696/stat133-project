@@ -15,4 +15,4 @@ timeframe <- data.frame(date, desc)
 ggplot(applestocks, aes(x=Date,y=appleclose)) + 
   geom_line() +
   geom_vline(data = timeframe, aes(xintercept = as.numeric(date), col=desc)) +
-  theme(legend.text=element_text(size = 10))+ labs(x="Date", y="Stock Close", col='Event')
+  theme(legend.text=element_text(size = 10))+ labs(title="Apple Stock Prices and Product Release Dates",x="Date", y="Stock Close", col='Event')

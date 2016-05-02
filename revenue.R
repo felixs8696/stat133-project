@@ -21,5 +21,5 @@ ggplot(prod_rev,aes(x=lubridate::ymd(Date))) +
   geom_bar(aes(weight=iPhone+iPad+iPod,fill='iPod')) + 
   geom_bar(aes(weight=iPhone+iPad,fill='iPad')) + 
   geom_bar(aes(weight=iPhone,fill='iPhone')) +
-  labs(x="Date", y="% of Revenue", fill='Product') +
+  labs(title="Apple % of Revenue by Product", x="Date", y="% of Revenue", fill='Product') +
   scale_fill_brewer(palette = "Set1")

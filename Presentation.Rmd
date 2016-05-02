@@ -1,0 +1,152 @@
+---
+title: "BIG APPLE"
+output: slidy_presentation
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+
+
+### overview of the project and questions
+
+ * Overview
+
+Analysis of Apple's Stock Reactions to Product Releases, Important Events, and Competition
+
+ * Question: 
+ 
+ 1.How does percent of revenue by product of the Apple company change throughout the course of history of Apple?
+
+ 2.How does Apple's stock price perform when compared against product releases and important events in its history?
+
+
+### describing the data
+> * Apple Stock price/total asset: 
+
+> i.The variables of interest are total asset of Apple and Date, which covers from Dec,1980 to April,2015.
+> ii. Although the graph seems to be simple, the process of obtaining and cleaning the data is complicated and prolonged since it involves web scraping.
+
+```{r,echo=FALSE,warning=FALSE,include=FALSE}
+library(DataComputing)
+library(XML)
+library(RCurl)
+URL<-"http://csimarket.com/stocks/balance.php?code=AAPL&hist=1"
+txt<- getURLContent(URL)
+doc<- htmlParse(txt)
+numbers<- doc%>%xpathSApply('//td[@class="debeligrub2"]/strong/span', xmlValue)
+Total_Assets<-numbers[11:15]
+Quarter<- doc%>%xpathSApply('//td[@class="s9 zagqs sve_jedan_red"]', xmlValue)
+```
+```{r}
+head(Quarter,3)
+```
+
+> * Timeline for products of Apple:  
+
+>  i. The variables of interest are close price of stock of apple, date of release of the Apple products, which covers from Dec,1980 to April, 2015.
+
+
+> * Percent of revenue by product of Apple company
+
+>  i. The variables of interest are percent of revenue of each product and date that covers from 1997 to 2015
+
+
+### a plot showing some results
+
+```{r,echo=FALSE,warning=FALSE,include=FALSE}
+
+readvalue= 
+  function(doc)
+  {
+    info <- doc %>% xpathSApply('//td[@class="debeligrub2"]/strong/span', xmlValue)
+    info[15]
+  }
+
+add<-c()
+for (i in 2:44) {
+  URL<-paste0("http://csimarket.com/stocks/balance.php?code=AAPL&hist=",i)
+  txt<- getURLContent(URL)
+  doc<- htmlParse(txt)
+  add<- c(add, readvalue(doc))
+}
+
+Total_Assets <-c(Total_Assets, add)
+readdate= 
+  function(doc)
+  {
+    info <- doc %>% xpathSApply('//td[@class="s9 zagqs sve_jedan_red"]', xmlValue)
+    info[5]
+  }
+
+date<-c()
+for (i in 2:44) {
+  URL<-paste0("http://csimarket.com/stocks/balance.php?code=AAPL&hist=",i)
+  txt<- getURLContent(URL)
+  doc<- htmlParse(txt)
+  date<- c(date, readdate(doc))
+}
+date<-c(Quarter,date)
+
+appleassets<-data.frame(date, Total_Assets)
+appleassets<- appleassets %>%
+  mutate(date=gsub("[(,),.]|I|V|Quarter|", "", date))
+appleassets<- appleassets %>% mutate(date=gsub(" ", "-", date))
+appleassets<-appleassets %>% mutate(date=gsub('.{1}$', "", date))
+appleassets[5, 1] = "Sep-27-2014"
+
+date<-c()
+month<-c()
+year<-c()
+for (i in 1:length(strsplit(appleassets$date, "-"))) {
+  date<-c(date, strsplit(appleassets$date, "-")[[i]][2])
+  month<-c(month, strsplit(appleassets$date, "-")[[i]][1])
+  year<-c(year, strsplit(appleassets$date, "-")[[i]][3])
+}
+lan<-c("Sep", "June", "March", "Dec")
+num<-c("09", "06", "03", "12")
+translation<- data.frame(lan, num)
+translation<-left_join(as.data.frame(month), translation, by=c("month"="lan"))
+month<-translation[,2]
+appleassets<- data.frame(Date=lubridate::ymd(paste0(year,"-", month, "-", date)), appleassets) %>% select(Date, Total_Assets) %>% mutate(Total_Assets=gsub(pattern = ".000$", "", Total_Assets))
+TotalAssets<-gsub(pattern = ",", "", Total_Assets)
+appleassets %>% mutate(Total_Assets=TotalAssets)
+```
+
+```{r,echo=FALSE}
+ggplot(appleassets, aes(x=Date, y=as.numeric(TotalAssets)))+geom_smooth()+labs(y="Total Assets", title="Apple's Total Assets")
+```
+
+
+```{r,echo=FALSE,warning=FALSE,include=FALSE}
+library(DataComputing)
+library(rvest)
+library(lubridate)
+applestocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=AAPL&d=3&e=29&f=2016&g=d&a=11&b=12&c=1980&ignore=.csv") %>%
+  mutate(appleclose=Close, Date=lubridate::ymd(Date), applevolume=Volume)
+timeline <- htmlParse("http://www.timetoast.com/timelines/apple-product-release-dates")
+root <- xmlRoot(timeline)
+dates <- root %>% xpathSApply("//time",xmlValue)
+date <- c()
+for(i in 1:length(dates)){
+  date <- c(date, lubridate::ymd(as.Date(dates[i], "%B %dst, %Y")))
+}
+desc <- root %>% xpathSApply("//td/b",xmlValue)
+timeframe <- data.frame(date, desc)
+
+
+```
+
+```{r,echo=FALSE}
+ggplot(applestocks, aes(x=Date,y=appleclose)) + 
+  geom_line() +
+  geom_vline(data = timeframe, aes(xintercept = as.numeric(date), col=desc)) +
+  theme(legend.text=element_text(size = 10))+ labs(title="Apple Stock Prices and Product Release Dates",x="Date", y="Stock Close", col='Event')
+```
+
+
+
+

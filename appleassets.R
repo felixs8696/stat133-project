@@ -1,6 +1,7 @@
 library(DataComputing)
 library(XML)
 library(RCurl)
+library(lubridate)
 URL<-"http://csimarket.com/stocks/balance.php?code=AAPL&hist=1"
 txt<- getURLContent(URL)
 doc<- htmlParse(txt)
@@ -64,4 +65,4 @@ month<-translation[,2]
 appleassets<- data.frame(Date=lubridate::ymd(paste0(year,"-", month, "-", date)), appleassets) %>% select(Date, Total_Assets) %>% mutate(Total_Assets=gsub(pattern = ".000$", "", Total_Assets))
 TotalAssets<-gsub(pattern = ",", "", Total_Assets)
 appleassets %>% mutate(Total_Assets=TotalAssets)
-ggplot(appleassets, aes(x=Date, y=as.numeric(TotalAssets)))+geom_smooth()+labs(y="Total Assets", title="Apple's Total Assets")
+ggplot(appleassets, aes(x=Date, y=as.numeric(TotalAssets)))+geom_smooth()+labs(y="Total Assets", title="Apple's Total Assets(2004-2016)")

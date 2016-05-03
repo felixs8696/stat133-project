@@ -10,14 +10,15 @@ library(rvest)
 library(lubridate)
 library(XML)
 library(RCurl)
-install.packages("png")
+library(png)
+library(grid)
+library(reshape2)
 ```
 <style>
   .col2 {
     columns: 2 200px;         /* number of columns and width in pixels*/
     -webkit-columns: 2 200px; /* chrome, safari */
     -moz-columns: 2 200px;    /* firefox */
-    padding-right=
   }
   .col3 {
     columns: 3 100px;
@@ -28,23 +29,21 @@ install.packages("png")
 
 ## Project Overview and Questions
 
- * Overview
+**Overview**: Analysis of Apple's Stock Reactions to Product Releases, Important Events, and Competition
 
-Analysis of Apple's Stock Reactions to Product Releases, Important Events, and Competition
-
- * Question: 
+**Questions:**
  
  1.How does percent of revenue by product of the Apple company change throughout the course of history of Apple?
 
  2.How does Apple's stock price perform when compared against product releases and important events in its history?
 
-**Describing the data**
+**Data Sets**
 
-> * Apple Stock price/total asset: 
-
-> i. The variables of interest are total asset of Apple and Date, which covers from Dec,1980 to April,2015.
-
-> ii. Although the graph seems to be simple, the process of obtaining and cleaning the data is complicated and prolonged since it involves web scraping.
+> 1. Apple Stock/Product Releases: Yahoo Finance and Timetoast.com
+> 2. Apple % Revenue by Product: Bare Figures
+> 3. Apple vs. Microsoft Stocks: Yahoo Finance
+> 4. Apple Asset Breakdown: Apple Inc. Balance Sheet Quarterly Report
+> Note: Although the graphs seem to be simple, the process of obtaining and cleaning the data is complicated and prolonged because it involves web scraping.
 
 ```{r,echo=FALSE,warning=FALSE,include=FALSE}
 URL<-"http://csimarket.com/stocks/balance.php?code=AAPL&hist=1"
@@ -60,7 +59,8 @@ Quarter<- doc%>%xpathSApply('//td[@class="s9 zagqs sve_jedan_red"]', xmlValue)
 <div class="col2">
 **Apple Stock and Product Correlation**
 
-> * The variables of interest are close price of stock of apple, date of release of the Apple products, which covers from Dec,1980 to April, 2015.
+* The variables of interest are close price of stock of apple, date of release of the Apple products, which covers from Dec,1980 to April, 2015.
+* Apple's biggest product releases consistently caused significant spikes in their stock price.
 
 ```{r,echo=FALSE,warning=FALSE,include=FALSE}
 applestocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=AAPL&d=3&e=29&f=2016&g=d&a=11&b=12&c=1980&ignore=.csv") %>%
@@ -76,18 +76,24 @@ desc <- root %>% xpathSApply("//td/b",xmlValue)
 timeframe <- data.frame(date, desc)
 ```
 
-```{r,echo=FALSE, fig.width=7}
+```{r,echo=FALSE, fig.width=6, fig.height=4.5}
 ggplot(applestocks, aes(x=Date,y=appleclose)) + 
   geom_line() +
   geom_vline(data = timeframe, aes(xintercept = as.numeric(date), col=desc)) +
-  theme(legend.text=element_text(size = 10))+ labs(title="Apple Stock Prices and Product Release Dates",x="Date", y="Stock Close", col='Event')
+  theme(legend.text=element_text(size = 10)) +
+  labs(title="Apple Stock Prices and Product Release Dates",
+       x="Date",
+       y="Stock Close",
+       col='Event') +
+  theme(plot.title = element_text(size = 15))
 ```
 
 **Percent of Revenue by product of Apple Inc.**
 
-> * The variables of interest are percent of revenue of each product and date that covers from 1997 to 2015
+* The variables of interest are percent of revenue of each product and date that covers from 1997 to 2015
+* We can see the evolution of Apple's dominant products. The Mac had given in largely to the iPhone.
 
-```{r,echo=13, fig.width=7}
+```{r, echo=FALSE, warning=FALSE, fig.width=6, fig.height=4}
 prod_rev <- read.csv("./appl_prod.csv")
 names(prod_rev)[names(prod_rev)=="Other.products"] <- "Other"
 prod_rev <- prod_rev %>%
@@ -110,7 +116,9 @@ ggplot(prod_rev,aes(x=lubridate::ymd(Date))) +
   geom_bar(aes(weight=iPhone+iPad+iPod,fill='iPod')) + 
   geom_bar(aes(weight=iPhone+iPad,fill='iPad')) + 
   geom_bar(aes(weight=iPhone,fill='iPhone')) +
-  labs(title="Apple % of Revenue by Product", x="Date", y="% of Revenue", fill='Product') +
+  labs(title="Apple % of Revenue by Product",
+       x="Date", y="% of Revenue", fill='Product') +
+  theme(plot.title = element_text(size = 15)) + 
   scale_fill_brewer(palette = "Set1")
 ```
 </div>
@@ -120,7 +128,11 @@ ggplot(prod_rev,aes(x=lubridate::ymd(Date))) +
 <div class="col2">
 **Apple vs. Microsoft Stock Comparison**
 
-```{r, echo=17, fig.width=6}
+* The variables of interest are the closing stock prices of Apple and Microsoft from 1985-Present.
+* Strong correlation in 1985-1995.
+* Apple spikes after the release of the iMac G3 in the late 1990s and begins to pull away after moving into the TV and mobile devices sector.
+
+```{r, echo=FALSE, warning=FALSE, fig.width=6, fig.height=4}
 applestocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=AAPL&d=3&e=29&f=2016&g=d&a=11&b=12&c=1980&ignore=.csv")
 microsoftstocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=MSFT&d=3&e=30&f=2016&g=d&a=2&b=13&c=1986&ignore=.csv")
 applestocks<- applestocks %>%
@@ -133,19 +145,16 @@ joined_stocks <- microsoftstocks %>%
 ggplot(joined_stocks, aes(x=Date)) +
   geom_line(aes(y=appleclose, color="Apple")) +
   geom_line(aes(y=microsoftclose, color="Microsoft")) +
-  labs(y="Stock Close", title="Apple vs. Microsoft Stock Prices", color="Company")
+  labs(y="Stock Close", title="Apple vs. Microsoft Stock Prices", color="Company") +
+  theme(plot.title = element_text(size = 15))
 ```
 
-**Timeline of Apple's Total Assets**
-```{r}
-library(DataComputing)
-library(png)
-library(grid)
-library(reshape2)
-library(XML)
-library(RCurl)
-library(lubridate)
-library(ggplot2)
+**Plot of Apple's Assets**
+
+* The variables of interest are the values of Apple's Total Assets, Equipment/Property, and Liabilities from 2004-2016.
+* 2010+ spikes in Assets and Liabilities shows continued growth while Equipment/Property assets stay low and avoid depreciation costs.
+
+```{r, echo=FALSE, warning=FALSE, fig.width=6, fig.height=4}
 URL<-"http://csimarket.com/stocks/balance.php?code=AAPL&hist=1"
 txt<- getURLContent(URL)
 doc<- htmlParse(txt)
@@ -160,14 +169,13 @@ Total_Liabilities<- numbers[26:30]
 Quarter<- doc%>%xpathSApply('//td[@class="s9 zagqs sve_jedan_red"]', xmlValue)
 totalassetspath<- '//td[@class="debeligrub2"]/strong/span'
 
-readvalue= 
-  function(doc, path, number)
-  {
-    info <- doc %>% xpathSApply(path, xmlValue)
-    info[number]
-  }
+readvalue = function(doc, path, number) {
+  info <- doc %>% xpathSApply(path, xmlValue)
+  info[number]
+}
 
 addtotalassets<-c()
+
 for (i in 2:44) {
   URL<-paste0("http://csimarket.com/stocks/balance.php?code=AAPL&hist=",i)
   txt<- getURLContent(URL)
@@ -183,81 +191,87 @@ for (i in 2:44) {
   doc<- htmlParse(txt)
   addtotalcurrentassets<- c(addtotalcurrentassets, readvalue(doc, totalassetspath, 10))
 }
-Total_Current_Assets<-c(Total_Current_Assets, addtotalcurrentassets)
 
+Total_Current_Assets<-c(Total_Current_Assets, addtotalcurrentassets)
 addEquipment<-c()
+
 for (i in 2:44) {
   URL<-paste0("http://csimarket.com/stocks/balance.php?code=AAPL&hist=",i)
   txt<- getURLContent(URL)
   doc<- htmlParse(txt)
   addEquipment<- c(addEquipment, readvalue(doc, subpath1, 45))
 }
-EquipmentPropertyPlantNet<-c(EquipmentPropertyPlantNet, addEquipment)
 
+EquipmentPropertyPlantNet<-c(EquipmentPropertyPlantNet, addEquipment)
 addliabilities<-c()
+
 for (i in 2:44) {
   URL<-paste0("http://csimarket.com/stocks/balance.php?code=AAPL&hist=",i)
   txt<- getURLContent(URL)
   doc<- htmlParse(txt)
   addliabilities<- c(addliabilities, readvalue(doc, totalassetspath, 30))
 }
-Total_Liabilities<-c(Total_Liabilities, addliabilities)
-readdate= 
-  function(doc)
-  {
-    info <- doc %>% xpathSApply('//td[@class="s9 zagqs sve_jedan_red"]', xmlValue)
-    info[5]
-  }
 
+Total_Liabilities<-c(Total_Liabilities, addliabilities)
+
+readdate = function(doc){
+  info <- doc %>% xpathSApply('//td[@class="s9 zagqs sve_jedan_red"]', xmlValue)
+  info[5]
+}
 date<-c()
+
 for (i in 2:44) {
   URL<-paste0("http://csimarket.com/stocks/balance.php?code=AAPL&hist=",i)
   txt<- getURLContent(URL)
   doc<- htmlParse(txt)
   date<- c(date, readdate(doc))
 }
-date<-c(Quarter,date)
 
+date<-c(Quarter,date)
 appleassets<-data.frame(date, Total_Assets)
 appleassets<- appleassets %>%
   mutate(date=gsub("[(,),.]|I|V|Quarter|", "", date))
 appleassets<- appleassets %>% mutate(date=gsub(" ", "-", date))
 appleassets<-appleassets %>% mutate(date=gsub('.{1}$', "", date))
 appleassets[5, 1] = "Sep-27-2014"
-
 day<-c()
 month<-c()
 year<-c()
+
 for (i in 1:length(strsplit(appleassets$date, "-"))) {
   day<-c(day, strsplit(appleassets$date, "-")[[i]][2])
   month<-c(month, strsplit(appleassets$date, "-")[[i]][1])
   year<-c(year, strsplit(appleassets$date, "-")[[i]][3])
 }
+
 lan<-c("Sep", "June", "March", "Dec")
 num<-c("09", "06", "03", "12")
 translation<- data.frame(lan, num)
 translation<-left_join(as.data.frame(month), translation, by=c("month"="lan"))
 month<-translation[,2]
-appleassets<- data.frame(Date=lubridate::ymd(paste0(year,"-", month, "-", day)), appleassets) %>% select(Date, Total_Assets) %>% mutate(Total_Assets=gsub(pattern = ".000$", "", Total_Assets))
-TotalAssets<-as.numeric(gsub(pattern = ",", "", Total_Assets))/1000
-TotalCurrentAssets<-as.numeric(gsub(pattern = ",", "", Total_Current_Assets))/1000
-TotalLiabilities<-as.numeric(gsub(pattern = ",", "", Total_Liabilities))/1000
-EquipmentPropertyPlantNet<-as.numeric(gsub(pattern = ",", "", EquipmentPropertyPlantNet))/1000
+appleassets <- data.frame(Date=lubridate::ymd(paste0(year,"-", month, "-", day)), appleassets) %>% select(Date, Total_Assets) %>% mutate(Total_Assets=gsub(pattern = ".000$", "", Total_Assets))
+TotalAssets <- as.numeric(gsub(pattern = ",", "", Total_Assets))/1000
+TotalCurrentAssets <-as.numeric(gsub(pattern = ",", "", Total_Current_Assets))/1000
+TotalLiabilities <- as.numeric(gsub(pattern = ",", "", Total_Liabilities))/1000
+EquipmentPropertyPlantNet <- as.numeric(gsub(pattern = ",", "", EquipmentPropertyPlantNet))/1000
 appleassets<- appleassets %>% data.frame(TotalAssets, EquipmentPropertyPlantNet, TotalLiabilities)
-APPLE<- melt(appleassets%>%select(Date, TotalAssets, EquipmentPropertyPlantNet, TotalLiabilities), id="Date", value.name = "AmountinBillions")
-download.file("https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/768px-Apple_logo_black.svg.png", destfile = "applelogo.png", mode="wb")
-img<-readPNG("applelogo.png")
-g<- rasterGrob(img, interpolate=TRUE)
-ggplot(APPLE, aes(x=Date, y=AmountinBillions))+geom_smooth(aes(color=variable, fill=variable))+labs(y="Amount (in Billions)", title="2004-2016")+theme(axis.title.x=element_text(size=20), 
-                                                                                                                                                       axis.title.y=element_text(size=20), 
-                                                                                                                                                       plot.title=element_text(size=30),
-                                                                                                                                                       panel.grid.major=element_blank(),
-                                                                                                                                                       panel.background=element_rect(fill="white"),
-                                                                                                                                                       panel.grid.minor=element_blank())+geom_point(shape=1, aes(color=variable))+
-  annotation_custom(g, ymin=250, ymax=300)
-```
+APPLE<- melt(appleassets %>%select(Date, TotalAssets, EquipmentPropertyPlantNet, TotalLiabilities), id="Date", value.name = "AmountinBillions")
+img <-readPNG("./applelogo.png")
+g <- rasterGrob(img, interpolate=TRUE)
+APPLE <- APPLE %>%
+  mutate(variable=gsub("TotalAssets","Total Assets",variable)) %>%
+  mutate(variable=gsub("EquipmentPropertyPlantNet","Equipment/Property",variable)) %>%
+  mutate(variable=gsub("TotalLiabilities","Total Liabilities",variable))
 
-```{r,echo=FALSE, fig.width=6}
-ggplot(appleassets, aes(x=Date, y=as.numeric(TotalAssets)))+geom_smooth()+labs(y="Total Assets", title="Apple's Total Assets")
+ggplot(APPLE, aes(x=Date, y=AmountinBillions)) +
+  geom_smooth(aes(color=variable, fill=variable)) +
+  labs(y="Value (in Billions)",
+       title="Breakdown of Apple's Assets from 2004-2016",
+       color="Type",
+       fill="Type") +
+  theme(panel.background=element_rect(fill="white"),
+        plot.title = element_text(size = 15)) +
+  geom_point(shape=1, aes(color=variable)) +
+  annotation_custom(g, ymin=250, ymax=300)
 ```
 </div>

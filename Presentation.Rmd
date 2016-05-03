@@ -10,6 +10,7 @@ library(rvest)
 library(lubridate)
 library(XML)
 library(RCurl)
+install.packages("png")
 ```
 <style>
   .col2 {

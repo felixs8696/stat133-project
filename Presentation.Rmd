@@ -6,12 +6,27 @@ output: slidy_presentation
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+library(DataComputing)
+library(rvest)
+library(lubridate)
+library(XML)
+library(RCurl)
 ```
+<style>
+  .col2 {
+    columns: 2 200px;         /* number of columns and width in pixels*/
+    -webkit-columns: 2 200px; /* chrome, safari */
+    -moz-columns: 2 200px;    /* firefox */
+    padding-right=
+  }
+  .col3 {
+    columns: 3 100px;
+    -webkit-columns: 3 100px;
+    -moz-columns: 3 100px;
+  }
+</style>
 
-
-
-
-### overview of the project and questions
+## Project Overview and Questions
 
  * Overview
 
@@ -23,17 +38,15 @@ Analysis of Apple's Stock Reactions to Product Releases, Important Events, and C
 
  2.How does Apple's stock price perform when compared against product releases and important events in its history?
 
+**Describing the data**
 
-### describing the data
 > * Apple Stock price/total asset: 
 
-> i.The variables of interest are total asset of Apple and Date, which covers from Dec,1980 to April,2015.
+> i. The variables of interest are total asset of Apple and Date, which covers from Dec,1980 to April,2015.
+
 > ii. Although the graph seems to be simple, the process of obtaining and cleaning the data is complicated and prolonged since it involves web scraping.
 
 ```{r,echo=FALSE,warning=FALSE,include=FALSE}
-library(DataComputing)
-library(XML)
-library(RCurl)
 URL<-"http://csimarket.com/stocks/balance.php?code=AAPL&hist=1"
 txt<- getURLContent(URL)
 doc<- htmlParse(txt)
@@ -41,24 +54,91 @@ numbers<- doc%>%xpathSApply('//td[@class="debeligrub2"]/strong/span', xmlValue)
 Total_Assets<-numbers[11:15]
 Quarter<- doc%>%xpathSApply('//td[@class="s9 zagqs sve_jedan_red"]', xmlValue)
 ```
-```{r}
-head(Quarter,3)
-```
 
-> * Timeline for products of Apple:  
+----
 
->  i. The variables of interest are close price of stock of apple, date of release of the Apple products, which covers from Dec,1980 to April, 2015.
+<div class="col2">
+**Apple Stock and Product Correlation**
 
-
-> * Percent of revenue by product of Apple company
-
->  i. The variables of interest are percent of revenue of each product and date that covers from 1997 to 2015
-
-
-### a plot showing some results
+> * The variables of interest are close price of stock of apple, date of release of the Apple products, which covers from Dec,1980 to April, 2015.
 
 ```{r,echo=FALSE,warning=FALSE,include=FALSE}
+applestocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=AAPL&d=3&e=29&f=2016&g=d&a=11&b=12&c=1980&ignore=.csv") %>%
+  mutate(appleclose=Close, Date=lubridate::ymd(Date), applevolume=Volume)
+timeline <- htmlParse("http://www.timetoast.com/timelines/apple-product-release-dates")
+root <- xmlRoot(timeline)
+dates <- root %>% xpathSApply("//time",xmlValue)
+date <- c()
+for(i in 1:length(dates)){
+  date <- c(date, lubridate::ymd(as.Date(dates[i], "%B %dst, %Y")))
+}
+desc <- root %>% xpathSApply("//td/b",xmlValue)
+timeframe <- data.frame(date, desc)
+```
 
+```{r,echo=FALSE, fig.width=7}
+ggplot(applestocks, aes(x=Date,y=appleclose)) + 
+  geom_line() +
+  geom_vline(data = timeframe, aes(xintercept = as.numeric(date), col=desc)) +
+  theme(legend.text=element_text(size = 10))+ labs(title="Apple Stock Prices and Product Release Dates",x="Date", y="Stock Close", col='Event')
+```
+
+**Percent of Revenue by product of Apple Inc.**
+
+> * The variables of interest are percent of revenue of each product and date that covers from 1997 to 2015
+
+```{r,echo=FALSE, fig.width=7}
+prod_rev <- read.csv("./appl_prod.csv")
+names(prod_rev)[names(prod_rev)=="Other.products"] <- "Other"
+prod_rev <- prod_rev %>%
+  mutate(Category=ifelse(as.numeric(substr(Category,4,5)>50),
+                         paste(19,substr(Category,4,5),"-",substr(Category,1,2),sep=""),
+                         paste(20,substr(Category,4,5),"-",substr(Category,1,2),sep="")))
+prod_rev <- prod_rev %>% mutate(Category=gsub("Q1$","01-01",Category))
+prod_rev <- prod_rev %>% mutate(Category=gsub("Q2$","04-01",Category))
+prod_rev <- prod_rev %>% mutate(Category=gsub("Q3$","07-01",Category))
+prod_rev <- prod_rev %>% mutate(Category=gsub("Q4$","10-01",Category))
+names(prod_rev)[names(prod_rev)=="Category"] <- "Date"
+prod_rev[is.na(prod_rev)] <- 0
+ggplot(prod_rev,aes(x=lubridate::ymd(Date))) +
+  geom_bar(aes(weight=iPhone+iPad+iPod+Mac+Services+Other+Peripherals+Software+Music,fill='Music')) + 
+  geom_bar(aes(weight=iPhone+iPad+iPod+Mac+Services+Other+Peripherals+Software,fill='Software')) + 
+  geom_bar(aes(weight=iPhone+iPad+iPod+Mac+Services+Other+Peripherals, fill='Peripherals')) + 
+  geom_bar(aes(weight=iPhone+iPad+iPod+Mac+Services+Other,fill='Other')) +
+  geom_bar(aes(weight=iPhone+iPad+iPod+Mac+Services,fill='Services')) + 
+  geom_bar(aes(weight=iPhone+iPad+iPod+Mac,fill='Mac')) + 
+  geom_bar(aes(weight=iPhone+iPad+iPod,fill='iPod')) + 
+  geom_bar(aes(weight=iPhone+iPad,fill='iPad')) + 
+  geom_bar(aes(weight=iPhone,fill='iPhone')) +
+  labs(title="Apple % of Revenue by Product", x="Date", y="% of Revenue", fill='Product') +
+  scale_fill_brewer(palette = "Set1")
+```
+</div>
+
+----
+
+<div class="col2">
+**Apple vs. Microsoft Stock Comparison**
+
+```{r, echo=FALSE, fig.width=6}
+applestocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=AAPL&d=3&e=29&f=2016&g=d&a=11&b=12&c=1980&ignore=.csv")
+microsoftstocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=MSFT&d=3&e=30&f=2016&g=d&a=2&b=13&c=1986&ignore=.csv")
+applestocks<- applestocks %>%
+  mutate(appleclose=Close, Date=lubridate::ymd(Date), applevolume=Volume)
+microsoftstocks<- microsoftstocks %>%
+  mutate(microsoftclose=Close, Date=lubridate::ymd(Date), microsoftvolume=Volume)
+joined_stocks <- microsoftstocks %>%
+  select(Date, microsoftclose, microsoftvolume) %>%
+  inner_join(applestocks %>% select(Date, appleclose,applevolume), by=c("Date"="Date"))
+ggplot(joined_stocks, aes(x=Date)) +
+  geom_line(aes(y=appleclose, color="Apple")) +
+  geom_line(aes(y=microsoftclose, color="Microsoft")) +
+  labs(y="Stock Close", title="Apple vs. Microsoft Stock Prices", color="Company")
+```
+
+**Timeline of Apple's Total Assets**
+
+```{r,echo=FALSE,warning=FALSE,include=FALSE}
 readvalue= 
   function(doc)
   {
@@ -116,37 +196,7 @@ TotalAssets<-gsub(pattern = ",", "", Total_Assets)
 appleassets %>% mutate(Total_Assets=TotalAssets)
 ```
 
-```{r,echo=FALSE}
+```{r,echo=FALSE, fig.width=6}
 ggplot(appleassets, aes(x=Date, y=as.numeric(TotalAssets)))+geom_smooth()+labs(y="Total Assets", title="Apple's Total Assets")
 ```
-
-
-```{r,echo=FALSE,warning=FALSE,include=FALSE}
-library(DataComputing)
-library(rvest)
-library(lubridate)
-applestocks <- read.csv("http://real-chart.finance.yahoo.com/table.csv?s=AAPL&d=3&e=29&f=2016&g=d&a=11&b=12&c=1980&ignore=.csv") %>%
-  mutate(appleclose=Close, Date=lubridate::ymd(Date), applevolume=Volume)
-timeline <- htmlParse("http://www.timetoast.com/timelines/apple-product-release-dates")
-root <- xmlRoot(timeline)
-dates <- root %>% xpathSApply("//time",xmlValue)
-date <- c()
-for(i in 1:length(dates)){
-  date <- c(date, lubridate::ymd(as.Date(dates[i], "%B %dst, %Y")))
-}
-desc <- root %>% xpathSApply("//td/b",xmlValue)
-timeframe <- data.frame(date, desc)
-
-
-```
-
-```{r,echo=FALSE}
-ggplot(applestocks, aes(x=Date,y=appleclose)) + 
-  geom_line() +
-  geom_vline(data = timeframe, aes(xintercept = as.numeric(date), col=desc)) +
-  theme(legend.text=element_text(size = 10))+ labs(title="Apple Stock Prices and Product Release Dates",x="Date", y="Stock Close", col='Event')
-```
-
-
-
-
+</div>

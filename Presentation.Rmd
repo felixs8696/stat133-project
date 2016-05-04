@@ -1,5 +1,6 @@
 ---
-title: "BIG APPLE"
+title: "Team Name: BIG APPLE"
+subtitle: "Members: Felix Su, Peter Wang, Bolun Deng, William Liu, Steven Ma"
 output: slidy_presentation
 ---
 
@@ -43,6 +44,7 @@ library(reshape2)
 > 2. Apple % Revenue by Product: Bare Figures
 > 3. Apple vs. Microsoft Stocks: Yahoo Finance
 > 4. Apple Asset Breakdown: Apple Inc. Balance Sheet Quarterly Report
+
 > Note: Although the graphs seem to be simple, the process of obtaining and cleaning the data is complicated and prolonged because it involves web scraping.
 
 ```{r,echo=FALSE,warning=FALSE,include=FALSE}

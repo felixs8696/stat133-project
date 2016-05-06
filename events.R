@@ -8,9 +8,6 @@ timeline <- htmlParse("http://www.timetoast.com/timelines/apple-product-release-
 root <- xmlRoot(timeline)
 dates <- root %>% xpathSApply("//time",xmlValue)
 date <- c()
-#for(i in 1:length(dates)){
-#  date <- c(date, as.numeric(lubridate::ymd(as.Date(dates[i], "%B %dst, %Y"))))
-#}
 for(i in 1:length(dates)){
   date <- c(date, toString(as.Date(dates[i], "%B %dst, %Y")))
 }
